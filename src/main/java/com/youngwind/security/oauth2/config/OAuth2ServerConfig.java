@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.R
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.client.JdbcClientDetailsService;
 import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
@@ -56,6 +57,38 @@ public class OAuth2ServerConfig {
         @Autowired
         AuthenticationManager authenticationManager;
 
+        @Override
+        public void configure(AuthorizationServerEndpointsConfigurer endpoints) {
+            endpoints
+                    .authenticationManager(authenticationManager)
+                    // jwt方式存储token
+                    .tokenStore(jwtTokenStore())
+                    .accessTokenConverter(accessTokenConverter())
+                    .allowedTokenEndpointRequestMethods(HttpMethod.GET, HttpMethod.POST);
+        }
+
+        // 配置client，此处为配置到内存中
+        @Override
+        public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+            // password 方案一：明文存储，用于测试，不能用于生产
+            String finalSecret = "123456";
+            // password 方案二：用 BCrypt 对密码编码
+            // String finalSecret = new BCryptPasswordEncoder().encode("123456");
+            // 配置两个客户端,一个用于password认证一个用于client认证
+            clients.inMemory().withClient("client_1")
+                    .authorizedGrantTypes("client_credentials", "refresh_token")
+                    .scopes("select")
+                    .authorities("oauth2")
+                    .secret(finalSecret)
+                    .and().withClient("client_2")
+                    .authorizedGrantTypes("password", "refresh_token")
+                    .scopes("select")
+                    .authorities("oauth2")
+                    .secret(finalSecret);
+
+            // 数据库配置client方式：clients.withClientDetails(new JdbcClientDetailsService(datasource));
+        }
+
         /**
          * 对Jwt签名时，增加一个密钥
          * JwtAccessTokenConverter：对Jwt来进行编码以及解码的类
@@ -73,41 +106,6 @@ public class OAuth2ServerConfig {
         @Bean
         public JwtTokenStore jwtTokenStore() {
             return new JwtTokenStore(accessTokenConverter());
-        }
-
-        @Override
-        public void configure(AuthorizationServerEndpointsConfigurer endpoints) {
-            endpoints
-                    .authenticationManager(authenticationManager)
-                    .tokenStore(jwtTokenStore())
-                    .accessTokenConverter(accessTokenConverter())
-                    .allowedTokenEndpointRequestMethods(HttpMethod.GET, HttpMethod.POST);
-        }
-
-        @Override
-        public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
-
-//        password 方案一：明文存储，用于测试，不能用于生产
-            String finalSecret = "123456";
-//        password 方案二：用 BCrypt 对密码编码
-//        String finalSecret = new BCryptPasswordEncoder().encode("123456");
-            //配置两个客户端,一个用于password认证一个用于client认证
-            clients.inMemory().withClient("client_1")
-                    .authorizedGrantTypes("client_credentials", "refresh_token")
-                    .scopes("select")
-                    .authorities("oauth2")
-                    .secret(finalSecret)
-                    .and().withClient("client_2")
-                    .authorizedGrantTypes("password", "refresh_token")
-                    .scopes("select")
-                    .authorities("oauth2")
-                    .secret(finalSecret);
-        }
-
-        @Override
-        public void configure(AuthorizationServerSecurityConfigurer oauthServer) {
-            //允许表单认证
-            oauthServer.allowFormAuthenticationForClients();
         }
 
     }
