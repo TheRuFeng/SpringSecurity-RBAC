@@ -7,6 +7,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -39,7 +40,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         //  password 方案二：用 BCrypt 对密码编码
         //  String finalPassword = bCryptPasswordEncoder.encode("123456");
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
-        manager.createUser(User.withUsername("user_1").password(finalPassword).roles("ADMIN").build());
+        manager.createUser(User.withUsername("user_1").password(finalPassword).authorities("ADMIN").build());
         manager.createUser(User.withUsername("user_2").password(finalPassword).authorities("USER").build());
         return manager;
     }
@@ -70,7 +71,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http
                 .authorizeRequests()
-                .antMatchers("/oauth/**").permitAll()
+                .antMatchers("testHasRole").access("hasAuthority('ADMIN')")
                 .anyRequest().authenticated();
     }*/
 }

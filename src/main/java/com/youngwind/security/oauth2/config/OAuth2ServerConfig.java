@@ -2,6 +2,7 @@ package com.youngwind.security.oauth2.config;
 
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,9 +20,11 @@ import org.springframework.security.oauth2.config.annotation.web.configurers.Aut
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.client.JdbcClientDetailsService;
+import org.springframework.security.oauth2.provider.expression.OAuth2WebSecurityExpressionHandler;
 import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler;
 
 /**
  * @author WangBingchen
@@ -30,6 +33,7 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 @Configuration
 public class OAuth2ServerConfig {
 
+    private static final String DEMO_RESOURCE_ID = "demo";
 
     /**
      * 只有配置了ResourceServerConfigurerAdapter filterChain才会走 OAuth2AuthenticationProcessingFilter
@@ -38,13 +42,17 @@ public class OAuth2ServerConfig {
     @EnableResourceServer
     protected static class ResourceServerConfiguration extends ResourceServerConfigurerAdapter {
 
+        @Override
+        public void configure(ResourceServerSecurityConfigurer resources) {
+            resources.resourceId(DEMO_RESOURCE_ID).stateless(true);
+        }
 
-        // 该段配置会取代SpringSecurity的鉴权配置
         @Override
         public void configure(HttpSecurity http) throws Exception {
-            http.authorizeRequests()
-                    .antMatchers("/oauth/**").permitAll()
-                    .anyRequest().authenticated();
+            http
+                    .authorizeRequests()
+                    .antMatchers("/test/hasAuthority").hasAuthority("ADMIN")
+                    .anyRequest().authenticated();//配置order访问控制，必须认证过后才可以访问
 
         }
     }
@@ -76,11 +84,13 @@ public class OAuth2ServerConfig {
             // String finalSecret = new BCryptPasswordEncoder().encode("123456");
             // 配置两个客户端,一个用于password认证一个用于client认证
             clients.inMemory().withClient("client_1")
+                    .resourceIds(DEMO_RESOURCE_ID)
                     .authorizedGrantTypes("client_credentials", "refresh_token")
                     .scopes("select")
                     .authorities("oauth2")
                     .secret(finalSecret)
                     .and().withClient("client_2")
+                    .resourceIds(DEMO_RESOURCE_ID)
                     .authorizedGrantTypes("password", "refresh_token")
                     .scopes("select")
                     .authorities("oauth2")

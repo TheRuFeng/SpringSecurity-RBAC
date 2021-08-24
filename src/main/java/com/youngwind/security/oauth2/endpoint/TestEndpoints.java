@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/test")
 public class TestEndpoints {
 
-    @PreAuthorize("hasAuthority('testHasAuthority')")
     @GetMapping("/hasAuthority")
     public String testHasAuthority() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
